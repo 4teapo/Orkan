@@ -207,17 +207,6 @@ function Orkan.advanceGrid(domain)
 	end
 end
 
-
---
--- Create new orkan instance
---
-function Orkan:createInstance(pip)
-	return {
-		domain = nil
-	}
-end
-
-
 --
 -- Create new orkan domain
 --
@@ -244,16 +233,6 @@ function Orkan.createDomain(dt, size, constantEulerianExternalForces)
 		---
 	}
 end
-
-
---
--- Bind domain to orkan instance
---
-function Orkan:bindDomainToInstance(instance, domain)
-	instance.domain = domain
-	instance.pip = self._pip(domain.dim)
-end
-
 
 --
 -- Adds particle [position, mass, material] to orkan domain
