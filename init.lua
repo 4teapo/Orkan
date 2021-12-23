@@ -171,6 +171,7 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 			gm_out[i] += w * mp
 		end
 	end
+	domain.nParticles = nParticles
 end
 
 function Orkan._g2p2g_3(domain, p0, p1, w)
