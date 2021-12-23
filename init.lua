@@ -194,7 +194,7 @@ end
 --
 function Orkan.advanceGrid(domain)
 	local gm_out, gv_out, gv_in = domain.gm_out, domain.gv_out, domain.gv_in
-	local extForces = domain.externalForces
+	local extForces = domain.constantEulerianExternalForces
 	local dt = domain.dt
 	-- Velocity -> momentum and eulerian external forces
 	for i, mass in ipairs(gm_out) do
