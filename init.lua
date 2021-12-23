@@ -20,45 +20,45 @@ local v2, v3 = Vector2.new, Vector3.new
 local v2b, v3b = v2(), v3()
 
 local neighbours2 = {
-    v2(0, 0),
-    v2(0, 1),
-    v2(0, 2),
-    v2(1, 0),
-    v2(1, 1),
-    v2(1, 2),
-    v2(2, 0),
-    v2(2, 1),
-    v2(2, 2)
+	v2(0, 0),
+	v2(0, 1),
+	v2(0, 2),
+	v2(1, 0),
+	v2(1, 1),
+	v2(1, 2),
+	v2(2, 0),
+	v2(2, 1),
+	v2(2, 2)
 }
 
 local neighbours3 = {
-    v3(0, 0, 0),
-    v3(0, 0, 1),
-    v3(0, 0, 2),
-    v3(0, 1, 0),
-    v3(0, 1, 1),
-    v3(0, 1, 2),
-    v3(0, 2, 0),
-    v3(0, 2, 1),
-    v3(0, 2, 2),
-    v3(1, 0, 0),
-    v3(1, 0, 1),
-    v3(1, 0, 2),
-    v3(1, 1, 0),
-    v3(1, 1, 1),
-    v3(1, 1, 2),
-    v3(1, 2, 0),
-    v3(1, 2, 1),
-    v3(1, 2, 2),
-    v3(2, 0, 0),
-    v3(2, 0, 1),
-    v3(2, 0, 2),
-    v3(2, 1, 0),
-    v3(2, 1, 1),
-    v3(2, 1, 2),
-    v3(2, 2, 0),
-    v3(2, 2, 1),
-    v3(2, 2, 2)
+	v3(0, 0, 0),
+	v3(0, 0, 1),
+	v3(0, 0, 2),
+	v3(0, 1, 0),
+	v3(0, 1, 1),
+	v3(0, 1, 2),
+	v3(0, 2, 0),
+	v3(0, 2, 1),
+	v3(0, 2, 2),
+	v3(1, 0, 0),
+	v3(1, 0, 1),
+	v3(1, 0, 2),
+	v3(1, 1, 0),
+	v3(1, 1, 1),
+	v3(1, 1, 2),
+	v3(1, 2, 0),
+	v3(1, 2, 1),
+	v3(1, 2, 2),
+	v3(2, 0, 0),
+	v3(2, 0, 1),
+	v3(2, 0, 2),
+	v3(2, 1, 0),
+	v3(2, 1, 1),
+	v3(2, 1, 2),
+	v3(2, 2, 0),
+	v3(2, 2, 1),
+	v3(2, 2, 2)
 }
 
 --
@@ -135,12 +135,12 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 
 			for _, offset in ipairs(neighbours2) do
 				-- TODO: make sure this is correct
-                local dxi = offset - dx
-                local i = Math.BoundedVec2ToInt(baseCell + offset, sx) + 1
-                local w = weightGradient[offset.X + 1].X * weightGradient[offset.Y + 1].Y
-                local vi = gv_in[i]
-                vp += w * vi
-                Cp = Math.AppliedMat22Add(Cp, Math.MatScalMul(4 * w, Math.Mat22OuterProd(vi, dxi)))
+				local dxi = offset - dx
+				local i = Math.BoundedVec2ToInt(baseCell + offset, sx) + 1
+				local w = weightGradient[offset.X + 1].X * weightGradient[offset.Y + 1].Y
+				local vi = gv_in[i]
+				vp += w * vi
+				Cp = Math.AppliedMat22Add(Cp, Math.MatScalMul(4 * w, Math.Mat22OuterProd(vi, dxi)))
 			end
 		else
 			nParticles += 1
@@ -168,8 +168,8 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 			local dxi = offset - dx
 			local i = Math.BoundedVec2ToInt(baseCell + offset, sx) + 1
 			local w = weightGradient[offset.X + 1].X * weightGradient[offset.Y + 1].Y
-            gv_out[i] += w * (mp * vp + Math.Mat22Vec2Mul(affine, dxi))
-            gm_out[i] += w * mp
+			gv_out[i] += w * (mp * vp + Math.Mat22Vec2Mul(affine, dxi))
+			gm_out[i] += w * mp
 		end
 	end
 end
