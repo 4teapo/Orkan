@@ -7,7 +7,6 @@
 	Orkan._g2p2g_3(domain, p0, p1)
 	-
 	Orkan.advanceParticles(domain, p0, p1)
-
 	Orkan.advanceGrid(domain)
 	Orkan.createDomain(dt, size, constantEulerianExternalForces)
 	Orkan.addParticle(domain, position, mass, material)
