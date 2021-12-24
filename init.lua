@@ -66,9 +66,9 @@ end
 local v2_1 = v2(1, 1)
 local v2_1_5, v2_0_75, v2_0_5 = v2_1 * 1.5, v2_1 * 0.75, v2_1 * 0.5
 local function computeWeightGradient2(weightGradient, distance)
-	weightGradient[1] = 0.5 * Math.SquareVector(v2_1_5 - distance)
-	weightGradient[2] = v2_0_75 - Math.SquareVector(distance - v2_1)
-	weightGradient[3] = 0.5 * Math.SquareVector(distance - v2_0_5)
+	weightGradient[1] = 0.5 * Math.square(v2_1_5 - distance)
+	weightGradient[2] = v2_0_75 - Math.square(distance - v2_1)
+	weightGradient[3] = 0.5 * Math.square(distance - v2_0_5)
 end
 
 --
@@ -77,12 +77,16 @@ end
 local v3_1 = v3(1, 1, 1)
 local v3_1_5, v3_0_75, v3_0_5 = v3_1 * 1.5, v3_1 * 0.75, v3_1 * 0.5
 local function computeWeightGradient3(weightGradient, distance)
-	weightGradient[1] = 0.5 * Math.SquareVector(v3_1_5 - distance)
-	weightGradient[2] = v3_0_75 - Math.SquareVector(distance - v3_1)
-	weightGradient[3] = 0.5 * Math.SquareVector(distance - v3_0_5)
+	weightGradient[1] = 0.5 * Math.square(v3_1_5 - distance)
+	weightGradient[2] = v3_0_75 - Math.square(distance - v3_1)
+	weightGradient[3] = 0.5 * Math.square(distance - v3_0_5)
 end
 
 local Orkan = {}
+
+local function vec2ToInt(vec, boundX)
+	return vec.X + boundX * vec.Y
+end
 
 --
 -- Runs 2D G2P2G on particles [p0] to [p1] in domain "domain" with initialized weight gradient "w"
@@ -98,14 +102,14 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 
 		local baseCell, dx
 		-- Thanks to the G2P2G pipeline, we can interpolate velocity for the grid, hence storing particle velocity is not needed
-		local vp, Cp = v2b, Math.BlankMatrix(2, 2)
+		local vp, Cp = v2b, Math.blankMatrix(2, 2)
 
 		-- We don't want to waste a G2P for new particles (this is timestep k+1!)
 		if p < nParticles then
 			--
 			-- G2P (timestep k+1)
 			--
-			baseCell = Math.FloorVec2(xp)
+			baseCell = Math.floorVec2(xp)
 			dx = xp - baseCell
 
 			computeWeightGradient2(weightGradient, dx)
@@ -113,11 +117,11 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 			for _, offset in ipairs(neighbouringCells2) do
 				-- TODO: make sure this is correct
 				local dxi = offset - dx
-				local i = Math.BoundedVec2ToInt(baseCell + offset, sx) + 1
+				local i = vec2ToInt(baseCell + offset, sx) + 1
 				local w = weightGradient[offset.X + 1].X * weightGradient[offset.Y + 1].Y
 				local vi = gv_in[i]
 				vp += w * vi
-				Cp = Math.AppliedMat22Add(Cp, Math.MatScalMul(4 * w, Math.Mat22OuterProd(vi, dxi)))
+				Cp = Math.appliedMat22Add(Cp, Math.matScalMul(Math.outerProduct22(vi, dxi), 4 * w))
 			end
 		else
 			nParticles += 1
@@ -130,7 +134,7 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 		--
 		-- P2G (timestep k)
 		--
-		baseCell = Math.FloorVec2(xp)
+		baseCell = Math.floorVec2(xp)
 		local dx = xp - baseCell
 
 		computeWeightGradient2(weightGradient, dx)
@@ -140,9 +144,9 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 
 		for _, offset in ipairs(neighbouringCells2) do
 			local dxi = offset - dx
-			local i = Math.BoundedVec2ToInt(baseCell + offset, sx) + 1
+			local i = vec2ToInt(baseCell + offset, sx) + 1
 			local w = weightGradient[offset.X + 1].X * weightGradient[offset.Y + 1].Y
-			gv_out[i] += w * (mp * vp + Math.Mat22Vec2Mul(affine, dxi))
+			gv_out[i] += w * (mp * vp + Math.matVecMul22(affine, dxi))
 			gm_out[i] += w * mp
 		end
 	end
@@ -228,7 +232,7 @@ end
 --
 function Orkan.addParticle(domain, position, mass, material)
 	local n = #domain.x + 1
-	domain.F[n] = Math.IdentityMatrix(domain.dim)
+	domain.F[n] = Math.identityMatrix(domain.dim)
 	domain.ms[n] = mass
 	domain.mt[n] = material
 	domain.x[n] = position
@@ -242,7 +246,7 @@ end
 --
 function Orkan.bulkAddParticles(domain, positions, masses, materials)
 	local x, ms, mt, F = domain.x, domain.ms, domain.mt, domain.F
-	local identityMat = Math.IdentityMatrix(domain.dim)
+	local identityMat = Math.identityMatrix(domain.dim)
 	local n = #x
 	for p, xp in ipairs(positions) do
 		n += 1
