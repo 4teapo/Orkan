@@ -18,47 +18,29 @@ local clamp = math.clamp
 local v2, v3 = Vector2.new, Vector3.new
 local v2b, v3b = v2(), v3()
 
-local neighbours2 = {
-	v2(0, 0),
-	v2(0, 1),
-	v2(0, 2),
-	v2(1, 0),
-	v2(1, 1),
-	v2(1, 2),
-	v2(2, 0),
-	v2(2, 1),
-	v2(2, 2)
-}
+--
+-- Generates 3^dim relative cell positions, where dim must be exactly 2 or 3.
+--
+local function generateNeighbouringCells(dim, min, max)
+	local neighbouringCells = {}
+	for i = min, max do
+		for j = min, max do
+			if dim == 3 then
+				for k = min, max do
+					table.insert(neighbouringCells, v3(i, j, k))
+				end
+				continue
+			end
+			table.insert(neighbouringCells, v2(i, j))
+		end
+	end
+end
 
-local neighbours3 = {
-	v3(0, 0, 0),
-	v3(0, 0, 1),
-	v3(0, 0, 2),
-	v3(0, 1, 0),
-	v3(0, 1, 1),
-	v3(0, 1, 2),
-	v3(0, 2, 0),
-	v3(0, 2, 1),
-	v3(0, 2, 2),
-	v3(1, 0, 0),
-	v3(1, 0, 1),
-	v3(1, 0, 2),
-	v3(1, 1, 0),
-	v3(1, 1, 1),
-	v3(1, 1, 2),
-	v3(1, 2, 0),
-	v3(1, 2, 1),
-	v3(1, 2, 2),
-	v3(2, 0, 0),
-	v3(2, 0, 1),
-	v3(2, 0, 2),
-	v3(2, 1, 0),
-	v3(2, 1, 1),
-	v3(2, 1, 2),
-	v3(2, 2, 0),
-	v3(2, 2, 1),
-	v3(2, 2, 2)
-}
+--
+-- Improve algorithm performance with ipairs and already cached vectors
+--
+local neighbouringCells2 = generateNeighbouringCells(2, 0, 2)
+local neighbouringCells3 = generateNeighbouringCells(3, 0, 2)
 
 --
 -- Get number of dimensions of vector
@@ -115,14 +97,10 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 		local xp = x[p]
 
 		local baseCell, dx
-		--
 		-- Thanks to the G2P2G pipeline, we can interpolate velocity for the grid, hence storing particle velocity is not needed
-		--
 		local vp, Cp = v2b, Math.BlankMatrix(2, 2)
 
-		--
 		-- We don't want to waste a G2P for new particles (this is timestep k+1!)
-		--
 		if p < nParticles then
 			--
 			-- G2P (timestep k+1)
@@ -132,7 +110,7 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 
 			computeWeightGradient2(weightGradient, dx)
 
-			for _, offset in ipairs(neighbours2) do
+			for _, offset in ipairs(neighbouringCells2) do
 				-- TODO: make sure this is correct
 				local dxi = offset - dx
 				local i = Math.BoundedVec2ToInt(baseCell + offset, sx) + 1
@@ -144,9 +122,6 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 		else
 			nParticles += 1
 		end
-		--
-		-- Advect particle
-		--
 		xp += dt * vp
 		xp = v2(
 			clamp(xp.X, 1, sx - 1),
@@ -163,7 +138,7 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 		local mp = ms[p]
 		local affine = Cp
 
-		for _, offset in ipairs(neighbours2) do
+		for _, offset in ipairs(neighbouringCells2) do
 			local dxi = offset - dx
 			local i = Math.BoundedVec2ToInt(baseCell + offset, sx) + 1
 			local w = weightGradient[offset.X + 1].X * weightGradient[offset.Y + 1].Y
@@ -179,6 +154,9 @@ function Orkan._g2p2g_3(domain, p0, p1, w)
 	end
 end
 
+
+
+
 --
 -- Advances particles [p0] to [p1] in domain "domain" with initialized weight gradient "w"
 --
@@ -189,6 +167,9 @@ function Orkan.advanceParticles(domain, p0, p1, w)
 		Orkan._g2p2g_3(domain, p0, p1, w)
 	end
 end
+
+
+
 
 --
 -- Converts momentum to velocity, applies constant external eulerian forces and swaps grid input/output
@@ -208,6 +189,9 @@ function Orkan.advanceGrid(domain)
 	end
 end
 
+
+
+
 --
 -- Create new orkan domain
 --
@@ -215,28 +199,32 @@ function Orkan.createDomain(dt, size, constantEulerianExternalForces)
 	local blank, n = size * 0, getVolume(size)
 	return {
 		---
-		dim = getDim(size),
-		size = size,
+		dim = getDim(size),		-- Domain's number of dimensinos
+		size = size,			-- Domain's grid size
 		---
-		gmOut = table.create(n, 0),
-		gvOut = table.create(n, blank),
-		gvIn = table.create(n, blank),
+		gmOut = table.create(n, 0),		-- Output mass tensor field (written to during each timestep, cleared between timesteps)
+		gvOut = table.create(n, blank),	-- Output velocity tensor field (written to during each timestep, cleared between timesteps)
+		gvIn = table.create(n, blank),	-- Input velocity tensor field (output velocity tensor field from last timestep)
 		---
-		x = {},
-		ms = {},
-		mt = {},
-		F = {},
+		x = {},		-- Particle positions
+		ms = {},	-- Particle masses
+		mt = {},	-- Particle materials
+		F = {},		-- Particle F-matrices
 		---
-		nParticles = 0,
+		nParticles = 0,		-- Number of particles (used and set internally and internally ONLY)
 		---
-		constantEulerianExternalForces = constantEulerianExternalForces,
-		dt = dt
+		constantEulerianExternalForces = constantEulerianExternalForces,	-- The contant external forces applied to grid nodes.
+		---
+		dt = dt		-- Delta-time used for ex. advection (sim stability depends on this, lower dt=more stable)
 		---
 	}
 end
 
+
+
+
 --
--- Adds particle [position, mass, material] to orkan domain
+-- Adds particle with attributes [position, mass, material] to orkan domain
 --
 function Orkan.addParticle(domain, position, mass, material)
 	local n = #domain.x + 1
@@ -246,8 +234,11 @@ function Orkan.addParticle(domain, position, mass, material)
 	domain.x[n] = position
 end
 
+
+
+
 --
--- Bulk adds particles to orkan domain
+-- Bulk adds particles with attributes [positions[p], masses[p], materials[p]] to orkan domain
 --
 function Orkan.bulkAddParticles(domain, positions, masses, materials)
 	local x, ms, mt, F = domain.x, domain.ms, domain.mt, domain.F
