@@ -19,7 +19,7 @@ local v2, v3 = Vector2.new, Vector3.new
 local v2b, v3b = v2(), v3()
 
 --
--- Generates 3^dim relative cell positions, where dim must be exactly 2 or 3.
+-- Generates 3^dim relative cell positions, placed in order in array {Vector(i, j[, k])}. Supports two and three dimensions.
 --
 local function generateNeighbouringCells(dim, min, max)
 	local neighbouringCells = {}
