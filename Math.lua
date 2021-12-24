@@ -14,16 +14,12 @@ function Math.floorVec2(vec)
 end
 
 
-
-
 --
 -- Squares object/number "v". Works as long as object has metamethod "__mul" defined.
 --
 function Math.square(v)
 	return v * v
 end
-
-
 
 
 --
@@ -45,8 +41,6 @@ function Math.identityMatrix(s)
 end
 
 
-
-
 --
 -- Computes outer product of two 2-dimensional vectors v0 and v1
 --
@@ -56,8 +50,6 @@ function Math.outerProduct22(v0, v1)
 		v0.Y*v1.X, v0.Y*v1.Y
 	}
 end
-
-
 
 
 --
@@ -80,8 +72,6 @@ function Math.appliedMat22Add(m0, m1)
 end
 
 
-
-
 --
 -- Computes multiplication of 2x2 matrix "mat" and 2-dimensional vector "vec"
 --
@@ -91,8 +81,6 @@ function Math.matVecMul22(mat, vec)
 		mat[3]*vec.Y + mat[4]*vec.Y
 	)
 end
-
-
 
 
 --

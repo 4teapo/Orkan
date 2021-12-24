@@ -34,6 +34,7 @@ local function generateNeighbouringCells(dim, min, max)
 			table.insert(neighbouringCells, v2(i, j))
 		end
 	end
+	return neighbouringCells
 end
 
 --
@@ -88,12 +89,16 @@ local function vec2ToInt(vec, boundX)
 	return vec.X + boundX * vec.Y
 end
 
+local function vec3ToInt(vec, boundX, boundY)
+	return vec.X + boundX * vec.Y + boundX * boundY * vec.Z
+end
+
 --
--- Runs 2D G2P2G on particles [p0] to [p1] in domain "domain" with initialized weight gradient "w"
+-- Runs 2D G2P2G on particles [p0] to [p1] in domain "domain" with initialized weight gradient "weightGradient"
 --
 function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 	local x, ms, mt, F = domain.x, domain.ms, domain.mt, domain.F
-	local gm_out, gv_out, gv_in = domain.gm_out, domain.gv_out, domain.gv_in
+	local gmOut, gvOut, gvIn = domain.gmOut, domain.gvOut, domain.gvIn
 	local size, dt = domain.size, domain.dt
 	local nParticles = domain.nParticles
 	local sx, sy = size.X, size.Y
@@ -109,7 +114,7 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 			--
 			-- G2P (timestep k+1)
 			--
-			baseCell = Math.floorVec2(xp)
+			baseCell = Math.floorVec2(xp - v2_0_5)
 			dx = xp - baseCell
 
 			computeWeightGradient2(weightGradient, dx)
@@ -118,24 +123,27 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 				-- TODO: make sure this is correct
 				local dxi = offset - dx
 				local i = vec2ToInt(baseCell + offset, sx) + 1
-				local w = weightGradient[offset.X + 1].X * weightGradient[offset.Y + 1].Y
-				local vi = gv_in[i]
-				vp += w * vi
-				Cp = Math.appliedMat22Add(Cp, Math.matScalMul(Math.outerProduct22(vi, dxi), 4 * w))
+				local weight = weightGradient[offset.X + 1].X * weightGradient[offset.Y + 1].Y
+				local vi = gvIn[i]
+				vp += weight * vi
+				Cp = Math.appliedMat22Add(Cp, Math.matScalMul(Math.outerProduct22(vi, dxi), 4 * weight))
 			end
+			xp += dt * vp
+			xp = v2(
+				clamp(xp.X, 1, sx - 1),
+				clamp(xp.Y, 1, sy - 1)
+			)
+			x[p] = xp
+
+
 		else
 			nParticles += 1
 		end
-		xp += dt * vp
-		xp = v2(
-			clamp(xp.X, 1, sx - 1),
-			clamp(xp.Y, 1, sy - 1)
-		)
 		--
 		-- P2G (timestep k)
 		--
-		baseCell = Math.floorVec2(xp)
-		local dx = xp - baseCell
+		baseCell = Math.floorVec2(xp - v2_0_5)
+		dx = xp - baseCell
 
 		computeWeightGradient2(weightGradient, dx)
 
@@ -145,14 +153,17 @@ function Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 		for _, offset in ipairs(neighbouringCells2) do
 			local dxi = offset - dx
 			local i = vec2ToInt(baseCell + offset, sx) + 1
-			local w = weightGradient[offset.X + 1].X * weightGradient[offset.Y + 1].Y
-			gv_out[i] += w * (mp * vp + Math.matVecMul22(affine, dxi))
-			gm_out[i] += w * mp
+			local weight = weightGradient[offset.X + 1].X * weightGradient[offset.Y + 1].Y
+			gvOut[i] += weight * (mp * vp + Math.matVecMul22(affine, dxi))
+			gmOut[i] += weight * mp
 		end
 	end
 	domain.nParticles = nParticles
 end
 
+--
+-- Runs 2D G2P2G on particles [p0] to [p1] in domain "domain" with initialized weight gradient "w"
+--
 function Orkan._g2p2g_3(domain, p0, p1, w)
 	for p = p0, p1 do
 	end
@@ -162,13 +173,13 @@ end
 
 
 --
--- Advances particles [p0] to [p1] in domain "domain" with initialized weight gradient "w"
+-- Advances particles [p0] to [p1] in domain "domain" with initialized weight gradient "weightGradient"
 --
-function Orkan.advanceParticles(domain, p0, p1, w)
+function Orkan.advanceParticles(domain, p0, p1, weightGradient)
 	if domain.dim == 2 then
-		Orkan._g2p2g_2(domain, p0, p1, w)
+		Orkan._g2p2g_2(domain, p0, p1, weightGradient)
 	else
-		Orkan._g2p2g_3(domain, p0, p1, w)
+		Orkan._g2p2g_3(domain, p0, p1, weightGradient)
 	end
 end
 
@@ -179,16 +190,16 @@ end
 -- Converts momentum to velocity, applies constant external eulerian forces and swaps grid input/output
 --
 function Orkan.advanceGrid(domain)
-	local gm_out, gv_out, gv_in = domain.gm_out, domain.gv_out, domain.gv_in
+	local gmOut, gvOut, gvIn = domain.gmOut, domain.gvOut, domain.gvIn
 	local extForces = domain.constantEulerianExternalForces
 	local dt = domain.dt
+	local blankVec = 0 * domain.size
 	-- Velocity -> momentum and eulerian external forces
-	for i, mass in ipairs(gm_out) do
+	for i, mass in ipairs(gmOut) do
 		if mass > 0 then
-			local v = gv_in[i]
-			gv_in[i] = gv_out[i] / mass + dt * extForces
-			gv_out[i] = v
-			gm_out[i] = 0
+			gvIn[i] = gvOut[i] / mass + dt * extForces
+			gvOut[i] = blankVec
+			gmOut[i] = 0
 		end
 	end
 end
